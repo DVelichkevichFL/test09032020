@@ -42,7 +42,7 @@ Navigate to **'&lt;TEST_ROOT&gt;/target'** folder. There you will find the follo
 1. 'startTest.bat';
 2. 'Test-[VERSION].jar'.
 
-Run the **'startTest.bat'** batch script to start the test application. In this case, tt will ask to enter a string to parse. Press enter to accept the default string.
+Run the **'startTest.bat'** batch script to start the test application. In this case, it will ask to enter a string to parse. Press enter to accept the default string.
 
 The script also accepts a string to parse as a command line argument:
 ```
