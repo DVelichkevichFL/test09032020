@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Built-By: d.velichkevich
+Created-By: Batch Script
+Build-Jdk: 1.8.0_131
+Main-Class: com.intetics.test.TestApplication
