@@ -35,6 +35,9 @@ And the following property to generate plain output:
 parsing.groups.organizing.strategy=plain
 ```
 ### Execution Instructions
+There is already a built executable JAR and **'startTest.bat'** in **'&lt;TEST_ROOT&gt;/built/Test'**!
+There is also **'application.properties'** with **'plain'** sorting strategy configured in **'&lt;TEST_ROOT&gt;/built'**.
+
 Navigate to **'&lt;TEST_ROOT&gt;/target'** folder. There you will find the following artifacts:
 1. 'startTest.bat';
 2. 'Test-[VERSION].jar'.
