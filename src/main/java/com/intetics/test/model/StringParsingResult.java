@@ -1,5 +1,7 @@
 package com.intetics.test.model;
 
+import com.intetics.test.model.analyzer.AnalyzingErrorResult;
+
 /**
  * Revision Info : $Author$ $Date$
  * Author  : d.velichkevich
@@ -11,21 +13,28 @@ public class StringParsingResult {
 
     private boolean errorOccurred;
 
-    private String erroneousPart;
+    private String preProcessedString;
+
+    private AnalyzingErrorResult errorResult;
 
     private StringGroup parsingResult;
 
 
-    public StringParsingResult(String erroneousPart) {
-        this.erroneousPart = erroneousPart;
-
-        errorOccurred = true;
+    protected StringParsingResult(boolean errorOccurred, String preProcessedString) {
+        this.errorOccurred = errorOccurred;
+        this.preProcessedString = preProcessedString;
     }
 
-    public StringParsingResult(StringGroup parsingResult) {
-        this.parsingResult = parsingResult;
+    public StringParsingResult(String preProcessedString, AnalyzingErrorResult errorResult) {
+        this(true, preProcessedString);
 
-        errorOccurred = false;
+        this.errorResult = errorResult;
+    }
+
+    public StringParsingResult(String preProcessedString, StringGroup parsingResult) {
+        this(false, preProcessedString);
+
+        this.parsingResult = parsingResult;
     }
 
 
@@ -35,8 +44,12 @@ public class StringParsingResult {
         return errorOccurred;
     }
 
-    public String getErroneousPart() {
-        return erroneousPart;
+    public String getPreProcessedString() {
+        return preProcessedString;
+    }
+
+    public AnalyzingErrorResult getErrorResult() {
+        return errorResult;
     }
 
     public StringGroup getParsingResult() {
@@ -60,18 +73,23 @@ public class StringParsingResult {
             return false;
         }
 
-        //noinspection SimplifiableIfStatement
-        if ((null != erroneousPart) ? (!erroneousPart.equals(that.getErroneousPart())) : (null != that.getErroneousPart())) {
+        if ((null != errorResult) ? (!errorResult.equals(that.getErrorResult())) : (null != that.getErrorResult())) {
             return false;
         }
 
-        return ((null != parsingResult) ? (parsingResult.equals(that.getParsingResult())) : (null != that.getParsingResult()));
+        //noinspection SimplifiableIfStatement
+        if ((null != preProcessedString) ? (!preProcessedString.equals(that.getPreProcessedString())) : (null != that.getPreProcessedString())) {
+            return false;
+        }
+
+        return (null != parsingResult) ? (parsingResult.equals(that.getParsingResult())) : (null == that.getParsingResult());
     }
 
     @Override
     public int hashCode() {
         int result = (errorOccurred ? (1) : (0));
-        result = 31 * result + ((null != erroneousPart) ? (erroneousPart.hashCode()) : (0));
+        result = 31 * result + ((null != preProcessedString) ? (preProcessedString.hashCode()) : (0));
+        result = 31 * result + ((null != errorResult) ? (errorResult.hashCode()) : (0));
         result = 31 * result + ((null != parsingResult) ? (parsingResult.hashCode()) : (0));
         return result;
     }

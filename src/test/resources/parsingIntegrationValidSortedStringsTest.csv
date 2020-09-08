@@ -1,0 +1,11 @@
+"(id,created,employee(id,firstname,employeeType(id), lastname),location)",created;employee;- employeeType;-- id;- firstname;- id;- lastname;id;location;
+test1(test2(test3(test4(test5(test6(test7)))))),test1;- test2;-- test3;--- test4;---- test5;----- test6;------ test7;
+"""             test1       (      test2        )      ,     test3,          test4       ,       test5        (            test6          (       test7       )         ,        test8      )          ,         test9            """,test1;- test2;test3;test4;test5;- test6;-- test7;- test8;test9;
+"""(id,account(id,username,email,password,address),settings(id,enableSaml,enableOAuth2,enableLdap,sorting(id,pageName,type,direction)),location(id,address))""",account;- address;- email;- id;- password;- username;id;location;- address;- id;settings;- enableLdap;- enableOAuth2;- enableSaml;- id;- sorting;-- direction;-- id;-- pageName;-- type;
+"""(id,account(id,username,email,password,address),settings(id,enableSaml,enableOAuth2,enableLdap,sorting(1,pageName,BY_NAME,ASC),sorting(2,pageName,BY_DATE,DESC),sorting(3,pageName,BY_CREATOR,ASC),sorting(4,pageName,BY_TITLE,DESC),location(id,address)))""",account;- address;- email;- id;- password;- username;id;settings;- enableLdap;- enableOAuth2;- enableSaml;- id;- location;-- address;-- id;- sorting;-- 4;-- BY_TITLE;-- DESC;-- pageName;- sorting;-- 3;-- ASC;-- BY_CREATOR;-- pageName;- sorting;-- 2;-- BY_DATE;-- DESC;-- pageName;- sorting;-- 1;-- ASC;-- BY_NAME;-- pageName;
+"""(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z)""",a;b;c;d;e;f;g;h;i;j;k;l;m;n;o;p;q;r;s;t;u;v;w;x;y;z;
+"""(digits(1,2,3,4,5,6,7,8,9,0))""",digits;- 0;- 1;- 2;- 3;- 4;- 5;- 6;- 7;- 8;- 9;
+"""(_(__,___),____,_____(______),_______,________(_________),__________)""",_;- __;- ___;____;_____;- ______;_______;________;- _________;__________;
+verySimpleTest,verySimpleTest;
+a,a;
+"test(test1),test2(test3)",test;- test1;test2;- test3;

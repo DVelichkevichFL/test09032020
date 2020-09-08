@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.util.Properties;
 
 /**
@@ -16,14 +17,16 @@ import java.util.Properties;
  */
 public class ResourceServiceImpl implements ResourceService {
 
+    static final String MESSAGE_PATTERN_RESOURCE_NOT_FOUND = "Fatal error: classpath resource not found! Resource name: '%s'";
+
+    static final String MESSAGES_FILENAME = "messages.properties";
+    static final String PROPERTIES_FILENAME = "application.properties";
+
     private static final String PATTERN_FATAL_PREFIX = "!!! %s";
 
-    private static final String MESSAGE_PATTERN_RESOURCE_NOT_FOUND = "Fatal error: classpath resource not found! Resource name: '%s'";
 
-
-    private static final String MESSAGES_FILENAME = "messages.properties";
-    private static final String PROPERTIES_FILENAME = "application.properties";
-
+    private String messagesFilename;
+    private String propertiesFilename;
 
     private Properties messages;
 
@@ -31,20 +34,27 @@ public class ResourceServiceImpl implements ResourceService {
 
 
     public ResourceServiceImpl() {
-        messages = new Properties();
-        properties = new Properties();
+        this(MESSAGES_FILENAME, PROPERTIES_FILENAME);
 
         initialize();
     }
 
-    private void initialize() {
-        loadClasspathResource(messages, MESSAGES_FILENAME);
+    public ResourceServiceImpl(String messagesFilename, String propertiesFilename) {
+        this.messagesFilename = messagesFilename;
+        this.propertiesFilename = propertiesFilename;
 
-        File propertiesFile = new File(PROPERTIES_FILENAME);
+        messages = new Properties();
+        properties = new Properties();
+    }
+
+    void initialize() {
+        loadClasspathResource(messages, messagesFilename);
+
+        File propertiesFile = new File(propertiesFilename);
         if (propertiesFile.exists()) {
-            loadFileResource(properties, PROPERTIES_FILENAME);
+            loadFileResource(properties, propertiesFilename);
         } else {
-            loadClasspathResource(properties, PROPERTIES_FILENAME);
+            loadClasspathResource(properties, propertiesFilename);
         }
     }
 
@@ -53,16 +63,18 @@ public class ResourceServiceImpl implements ResourceService {
      *
      * @param properties {@link Properties} consuming instance (Right Value)
      * @param resourceFilename {@link String} value of configuration filename
-     * @return {@link Boolean} (primitive) value: {@code true} if configuration is loaded successfully and {@code false} otherwise
      */
-    private boolean loadClasspathResource(Properties properties, String resourceFilename) {
-        try (InputStream messagesStream = getClass().getClassLoader().getResourceAsStream(resourceFilename)) {
+    void loadClasspathResource(Properties properties, String resourceFilename) {
+        try (InputStream messagesStream = getClasspathResourceInputStream(resourceFilename)) {
             properties.load(messagesStream);
         } catch (IOException e) {
             displayFatalError(resourceFilename);
-            return false;
+            throw new RuntimeException(e);
         }
-        return true;
+    }
+
+    InputStream getClasspathResourceInputStream(String resourceFilename) {
+        return getClass().getClassLoader().getResourceAsStream(resourceFilename);
     }
 
     /**
@@ -70,21 +82,23 @@ public class ResourceServiceImpl implements ResourceService {
      *
      * @param properties {@link Properties} consuming instance (Right Value)
      * @param resourceFilename {@link String} value of configuration filename
-     * @return {@link Boolean} (primitive) value: {@code true} if configuration is loaded successfully and {@code false} otherwise
      */
-    private boolean loadFileResource(Properties properties, String resourceFilename) {
+    void loadFileResource(Properties properties, String resourceFilename) {
         try (InputStream stream = new FileInputStream(resourceFilename)) {
             properties.load(stream);
         } catch (IOException e) {
             displayFatalError(resourceFilename);
-            return false;
+            throw new RuntimeException(e);
         }
-        return true;
     }
 
-    private void displayFatalError(String resourceName) {
+    void displayFatalError(String resourceName) {
         String fatalMessage = String.format(MESSAGE_PATTERN_RESOURCE_NOT_FOUND, resourceName);
-        System.out.println(String.format(PATTERN_FATAL_PREFIX, fatalMessage));
+        getConsoleOutputStream().println(String.format(PATTERN_FATAL_PREFIX, fatalMessage));
+    }
+
+    PrintStream getConsoleOutputStream() {
+        return System.out;
     }
 
     @Override
@@ -100,5 +114,32 @@ public class ResourceServiceImpl implements ResourceService {
     @Override
     public String getMessage(String key, String defaultValue) {
         return messages.getProperty(key, defaultValue);
+    }
+
+
+    // Getters And Setters
+
+    String getMessagesFilename() {
+        return messagesFilename;
+    }
+
+    String getPropertiesFilename() {
+        return propertiesFilename;
+    }
+
+    Properties getMessages() {
+        return messages;
+    }
+
+    void setMessages(Properties messages) {
+        this.messages = messages;
+    }
+
+    Properties getProperties() {
+        return properties;
+    }
+
+    void setProperties(Properties properties) {
+        this.properties = properties;
     }
 }

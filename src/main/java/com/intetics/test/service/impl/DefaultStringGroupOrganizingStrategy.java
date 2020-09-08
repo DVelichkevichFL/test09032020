@@ -1,7 +1,7 @@
 package com.intetics.test.service.impl;
 
-        import com.intetics.test.model.StringGroup;
-        import com.intetics.test.service.StringGroupOrganizingStrategy;
+import com.intetics.test.model.StringGroup;
+import com.intetics.test.service.StringGroupOrganizingStrategy;
 
 /**
  * Revision Info : $Author$ $Date$

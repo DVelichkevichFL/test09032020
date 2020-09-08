@@ -2,8 +2,29 @@ package com.intetics.test.service.impl;
 
 import com.intetics.test.model.StringGroup;
 import com.intetics.test.model.StringParsingResult;
+import com.intetics.test.model.analyzer.AnalyzingContext;
+import com.intetics.test.model.analyzer.AnalyzingErrorResult;
 import com.intetics.test.service.StringGroupOrganizingStrategy;
 import com.intetics.test.service.StringParsingService;
+import com.intetics.test.service.analyzer.SymbolAnalyzer;
+import com.intetics.test.service.analyzer.impl.BracketClosingAnalyzer;
+import com.intetics.test.service.analyzer.impl.BracketOpeningAnalyzer;
+import com.intetics.test.service.analyzer.impl.CommaAnalyzer;
+import com.intetics.test.service.analyzer.impl.DefaultAnalyzer;
+import com.intetics.test.service.analyzer.impl.LastSymbolAnalyzer;
+import com.intetics.test.service.analyzer.impl.QuoteAnalyzer;
+import com.intetics.test.service.analyzer.impl.SymbolValidityAnalyzer;
+import com.intetics.test.service.analyzer.validator.SymbolValidator;
+import com.intetics.test.service.analyzer.validator.impl.BracketClosingValidator;
+import com.intetics.test.service.analyzer.validator.impl.BracketOpeningValidator;
+import com.intetics.test.service.analyzer.validator.impl.CommaValidator;
+import com.intetics.test.service.analyzer.validator.impl.NameSymbolsValidator;
+import com.intetics.test.service.analyzer.validator.impl.QuoteValidator;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Revision Info : $Author$ $Date$
@@ -14,106 +35,92 @@ import com.intetics.test.service.StringParsingService;
  */
 public class StringParsingServiceImpl implements StringParsingService {
 
-    private static final String DELIMITER_TOKENS = ",";
+    private static final int INDEX_SOURCE_START = 0;
 
-    private static final char DELIMITER_QUOTE = '"';
-    private static final char DELIMITER_GROUP_OPEN = '(';
-    private static final char DELIMITER_GROUP_CLOSE = ')';
+    private static final char SYMBOL_ZERO = '\u0000';
 
+    private static final String STRING_EMPTY = "";
 
-    private static final int SIZE_EMPTY = 0;
-    private static final int SIZE_NO_COMMAS = 2;
+    private static final String PATTERN_WHITESPACES = "\\s*";
+    private static final Pattern PATTERN_INVALID_TOKENS = Pattern.compile("[\\w]+(\\s)+[\\w]+", Pattern.CASE_INSENSITIVE);
 
 
     private StringGroupOrganizingStrategy organizingStrategy;
 
+    private SymbolAnalyzer analyzersChain;
 
-    public StringParsingServiceImpl(StringGroupOrganizingStrategy organizingStrategy) {
-        setOrganizingStrategy(organizingStrategy);
+
+    StringParsingServiceImpl() {
     }
 
-    private void setOrganizingStrategy(StringGroupOrganizingStrategy organizingStrategy) {
+    public StringParsingServiceImpl(StringGroupOrganizingStrategy organizingStrategy) {
+        this(organizingStrategy, null);
+    }
+
+    public StringParsingServiceImpl(StringGroupOrganizingStrategy organizingStrategy, SymbolAnalyzer analyzersChain) {
+        setOrganizingStrategy(organizingStrategy);
+        setAnalyzersChain(analyzersChain);
+    }
+
+    void setOrganizingStrategy(StringGroupOrganizingStrategy organizingStrategy) {
         this.organizingStrategy = (null == organizingStrategy) ? (new DefaultStringGroupOrganizingStrategy()) : (organizingStrategy);
     }
 
+    void setAnalyzersChain(SymbolAnalyzer analyzersChain) {
+        this.analyzersChain = (null == analyzersChain) ? (createAnalyzersChain()) : (analyzersChain);
+    }
+
+    SymbolAnalyzer createAnalyzersChain() {
+        LastSymbolAnalyzer lastSymbolAnalyzer = new LastSymbolAnalyzer(null, organizingStrategy);
+        DefaultAnalyzer defaultAnalyzer = new DefaultAnalyzer(lastSymbolAnalyzer);
+        QuoteAnalyzer quoteAnalyzer = new QuoteAnalyzer(defaultAnalyzer);
+        BracketClosingAnalyzer bracketClosingAnalyzer = new BracketClosingAnalyzer(quoteAnalyzer, organizingStrategy);
+        BracketOpeningAnalyzer bracketOpeningAnalyzer = new BracketOpeningAnalyzer(bracketClosingAnalyzer, organizingStrategy);
+        CommaAnalyzer commaAnalyzer = new CommaAnalyzer(bracketOpeningAnalyzer, organizingStrategy);
+        return new SymbolValidityAnalyzer(commaAnalyzer, createValidators());
+    }
+
+    List<SymbolValidator> createValidators() {
+        NameSymbolsValidator validator = new NameSymbolsValidator();
+        return new ArrayList<>(Arrays.asList(
+                validator, new CommaValidator(validator), new BracketOpeningValidator(validator), new BracketClosingValidator(validator), new QuoteValidator(validator)));
+    }
+
     @Override
-    public StringParsingResult parse(String sourceString) {
-        int openedGroups = 0;
+    public StringParsingResult parse(String source) {
+        Matcher matcher = PATTERN_INVALID_TOKENS.matcher(source);
+        if (matcher.find()) {
+            return new StringParsingResult(source, new AnalyzingErrorResult((matcher.start() + 1), matcher.end()));
+        }
+
         StringGroup root = organizingStrategy.createRoot();
-        StringGroup current = root;
-        StringBuilder tokenName = new StringBuilder();
-        String[] tokens = sourceString.split(DELIMITER_TOKENS);
-        int lastIndex = tokens.length - 1;
-        for (int i = 0; i < tokens.length; i++) {
-            String token = tokens[i].trim();
-            if (token.isEmpty() && (tokens.length > SIZE_NO_COMMAS) && (i > 0)) {
-                return new StringParsingResult(sourceString);
+        source = source.replaceAll(PATTERN_WHITESPACES, STRING_EMPTY);
+        int lastIndex = source.length() - 1;
+        AnalyzingContext context = new AnalyzingContext(INDEX_SOURCE_START, lastIndex, SYMBOL_ZERO, source, root);
+        for (int i = INDEX_SOURCE_START; i <= lastIndex; i++) {
+            updateContext(context, source, i);
+            AnalyzingErrorResult errorResult = analyzersChain.analyze(context);
+            if (null != errorResult) {
+                return new StringParsingResult(source, errorResult);
             }
-
-            int lastTokenIndex = token.length() - 1;
-            for (int j = 0; j < token.length(); j++) {
-                char symbol = token.charAt(j);
-                if (DELIMITER_QUOTE == symbol) {
-                    if (((i > 0) || (j > 0)) && ((i < lastIndex) || (j < lastTokenIndex))) {
-                        return new StringParsingResult(sourceString);
-                    }
-                } else if (DELIMITER_GROUP_OPEN == symbol) {
-                    openedGroups++;
-                    current = openGroup(current, tokenName);
-                } else if (DELIMITER_GROUP_CLOSE == symbol) {
-                    if ((SIZE_EMPTY == openedGroups) || isGroupClosingInvalid(token, j)) {
-                        return new StringParsingResult(token);
-                    }
-
-                    openedGroups--;
-                    current = closeGroup(current, tokenName);
-                } else {
-                    tokenName.append(symbol);
-                }
-            }
-            addChildGroup(current, tokenName);
         }
 
-        if ((openedGroups > 0) || root.getChildrenGroups().isEmpty()) {
-            return new StringParsingResult(sourceString);
-        }
-
-        return new StringParsingResult(root);
+        return new StringParsingResult(source, root);
     }
 
-    private StringGroup openGroup(StringGroup current, StringBuilder tokenName) {
-        if (SIZE_EMPTY == tokenName.length()) {
-            return current;
-        }
-
-        current = organizingStrategy.create((current.getGroupLevel() + 1), tokenName.toString(), current);
-        current.getParentGroup().getChildrenGroups().add(current);
-        tokenName.setLength(SIZE_EMPTY);
-        return current;
+    void updateContext(AnalyzingContext context, String source, int index) {
+        context.setIndex(index);
+        context.setSymbol(source.charAt(index));
     }
 
-    private boolean isGroupClosingInvalid(String token, int tokenSymbolIndex) {
-        return (0 == tokenSymbolIndex) || ((tokenSymbolIndex > 0) && !Character.isDigit(token.charAt(tokenSymbolIndex - 1))
-                && !Character.isAlphabetic(token.charAt(tokenSymbolIndex - 1)) && (DELIMITER_GROUP_CLOSE != token.charAt(tokenSymbolIndex - 1)));
+
+    // Getters And Setters
+
+    StringGroupOrganizingStrategy getOrganizingStrategy() {
+        return organizingStrategy;
     }
 
-    private StringGroup closeGroup(StringGroup current, StringBuilder tokenName) {
-        if (SIZE_EMPTY == tokenName.length()) {
-            return current;
-        }
-
-        addChildGroup(current, tokenName);
-        current = current.getParentGroup();
-        return current;
-    }
-
-    private void addChildGroup(StringGroup current, StringBuilder tokenName) {
-        if (SIZE_EMPTY == tokenName.length()) {
-            return;
-        }
-
-        StringGroup group = organizingStrategy.create((current.getGroupLevel() + 1), tokenName.toString(), current);
-        current.getChildrenGroups().add(group);
-        tokenName.setLength(SIZE_EMPTY);
+    SymbolAnalyzer getAnalyzersChain() {
+        return analyzersChain;
     }
 }

@@ -1,0 +1,5 @@
+Symbol Under Index,Symbol Index,Source Text,Is Previous Symbol Valid?,Previous Symbol,Expected Result,Expected CURRENT Symbol On Calls,Expected Previous Symbol On Calls
+e,2,"""test,test""",true,t,true,e,t
+e,6,"test(test),test",true,t,true,e,t
+t,14,"test(test),test",true,s,true,t,s
+t,10,test(test)test,false,),false,t,)

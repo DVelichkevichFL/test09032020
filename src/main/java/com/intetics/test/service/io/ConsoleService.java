@@ -20,7 +20,7 @@ public interface ConsoleService {
      * Asks the user to enter a string to parse
      *
      * @param groupsOrganizingStrategy {@link String} value of groups organizing strategy
-     * @return {@link String} value of the entered string or the default string to parse
+     * @return {@link String} value of the entered string or the default string to parse. It never returns {@code null} or an empty string!
      */
     String requestString(String groupsOrganizingStrategy);
 
